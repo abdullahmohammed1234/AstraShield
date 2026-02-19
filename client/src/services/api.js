@@ -65,7 +65,31 @@ export const conjunctionApi = {
   getAll: (limit = 100) => api.get(`/conjunctions?limit=${Math.min(limit, 500)}`),
   getHighRisk: (level = 'high') => api.get(`/conjunctions/high?level=${level}`),
   getStatistics: () => api.get('/conjunctions/stats'),
-  runDetection: () => api.post('/conjunctions/run')
+  runDetection: () => api.post('/conjunctions/run'),
+  getDetailedAnalysis: (satA, satB) => api.get(`/conjunctions/analysis/${satA}/${satB}`)
+};
+
+export const alertApi = {
+  getAll: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/alerts${queryParams ? `?${queryParams}` : ''}`);
+  },
+  getById: (alertId) => api.get(`/alerts/${alertId}`),
+  acknowledge: (alertId, data) => api.post(`/alerts/${alertId}/acknowledge`, data),
+  escalate: (alertId, data) => api.post(`/alerts/${alertId}/escalate`, data),
+  resolve: (alertId, data) => api.post(`/alerts/${alertId}/resolve`, data),
+  close: (alertId, data) => api.post(`/alerts/${alertId}/close`, data),
+  getStatistics: () => api.get('/alerts/statistics'),
+  getUnacknowledged: () => api.get('/alerts/unacknowledged')
+};
+
+export const webhookApi = {
+  getAll: () => api.get('/alerts/webhooks'),
+  getById: (webhookId) => api.get(`/alerts/webhooks/${webhookId}`),
+  create: (data) => api.post('/alerts/webhooks', data),
+  update: (webhookId, data) => api.put(`/alerts/webhooks/${webhookId}`, data),
+  delete: (webhookId) => api.delete(`/alerts/webhooks/${webhookId}`),
+  test: (webhookId) => api.post(`/alerts/webhooks/${webhookId}/test`)
 };
 
 export default api;

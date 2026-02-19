@@ -2,13 +2,18 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
+const http = require('http');
+const WebSocket = require('ws');
 const connectDB = require('./config/db');
 const satelliteRoutes = require('./routes/satelliteRoutes');
 const riskRoutes = require('./routes/riskRoutes');
 const conjunctionRoutes = require('./routes/conjunctionRoutes');
+const alertRoutes = require('./routes/alertRoutes');
 const { fetchAndStoreTLE } = require('./services/tleFetcher');
 const { calculateAllRiskScores, calculateAllRiskScoresWithConjunctions } = require('./services/riskEngine');
-const { runConjunctionDetection } = require('./services/conjunctionEngine');
+const { runConjunctionDetection, getHighRiskConjunctions } = require('./services/conjunctionEngine');
+const { processNewConjunctions } = require('./services/alertService');
+const { runEscalationCheck, setWebSocketServer } = require('./services/alertService');
 const Satellite = require('./models/Satellite');
 
 // Import resilience utilities
@@ -71,6 +76,7 @@ connectDB();
 app.use('/api/satellites', satelliteRoutes);
 app.use('/api/risk', riskRoutes);
 app.use('/api/conjunctions', conjunctionRoutes);
+app.use('/api/alerts', alertRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -145,9 +151,26 @@ cron.schedule('0 */6 * * *', async () => {
   try {
     await runConjunctionDetection();
     await calculateAllRiskScoresWithConjunctions();
+    
+    // Process new conjunctions for alerts
+    const highRiskConjunctions = await getHighRiskConjunctions('high');
+    if (highRiskConjunctions && highRiskConjunctions.length > 0) {
+      await processNewConjunctions(highRiskConjunctions);
+    }
+    
     logger.info('Conjunction detection completed', { job: 'conjunction-detection' });
   } catch (error) {
     logger.error('Conjunction detection failed', { job: 'conjunction-detection', error: error.message });
+  }
+});
+
+// Alert escalation check every minute
+cron.schedule('* * * * *', async () => {
+  logger.info('Running alert escalation check...', { job: 'escalation-check' });
+  try {
+    await runEscalationCheck();
+  } catch (error) {
+    logger.error('Escalation check failed', { job: 'escalation-check', error: error.message });
   }
 });
 
@@ -158,15 +181,76 @@ app.use(notFoundHandler);
 // Register global error handlers for uncaught exceptions
 registerGlobalErrorHandlers();
 
-app.listen(PORT, () => {
+// Create HTTP server with WebSocket support
+const server = http.createServer(app);
+
+// Set up WebSocket server for real-time alerts
+const wss = new WebSocket.Server({ server, path: '/ws/alerts' });
+
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+  logger.info('WebSocket client connected', { 
+    ip: req.socket.remoteAddress,
+    url: req.url 
+  });
+  
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'connected',
+    payload: {
+      message: 'Connected to AstraShield real-time alerts'
+    },
+    timestamp: new Date().toISOString()
+  }));
+  
+  // Handle client messages
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      logger.debug('WebSocket message received', { data });
+      
+      // Handle subscription requests
+      if (data.type === 'subscribe') {
+        ws.subscriptions = ws.subscriptions || [];
+        ws.subscriptions.push(data.payload);
+        ws.send(JSON.stringify({
+          type: 'subscribed',
+          payload: { subscriptions: ws.subscriptions },
+          timestamp: new Date().toISOString()
+        }));
+      }
+    } catch (error) {
+      logger.error('WebSocket message parse error', { error: error.message });
+    }
+  });
+  
+  // Handle disconnection
+  ws.on('close', () => {
+    logger.info('WebSocket client disconnected');
+  });
+  
+  // Handle errors
+  ws.on('error', (error) => {
+    logger.error('WebSocket error', { error: error.message });
+  });
+});
+
+// Set up alert service with WebSocket server
+setWebSocketServer(wss);
+
+logger.info('WebSocket server initialized', { path: '/ws/alerts' });
+
+server.listen(PORT, () => {
   logger.info(`AstraShield Server started`, {
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     service: 'astrashield-api',
+    websocket: '/ws/alerts',
     endpoints: [
       '/api/satellites',
       '/api/risk',
       '/api/conjunctions',
+      '/api/alerts',
       '/api/health',
       '/api/health/circuit-breakers'
     ]
@@ -174,3 +258,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+module.exports.server = server;

@@ -1,6 +1,7 @@
 const satellite = require('satellite.js');
 const Satellite = require('../models/Satellite');
 const Conjunction = require('../models/Conjunction');
+const collisionProbabilityEngine = require('./collisionProbabilityEngine');
 
 const CONFIG = {
   MAX_SATELLITES: 300,
@@ -13,7 +14,10 @@ const CONFIG = {
     HIGH: 5,
     CRITICAL: 1
   },
-  BATCH_SIZE: 100
+  BATCH_SIZE: 100,
+  // Collision probability calculation settings
+  ENABLE_PC_CALCULATION: true,
+  MAX_PC_CALCULATION_BATCH: 50  // Limit PC calculations for performance
 };
 
 const getAltitudeBand = (altitudeKm) => {
@@ -69,7 +73,7 @@ const getRiskLevel = (distanceKm) => {
   return 'low';
 };
 
-const computeConjunction = (satA, satB, positionsA, positionsB) => {
+const computeConjunction = async (satA, satB, positionsA, positionsB) => {
   let minDistance = Infinity;
   let timeOfClosestApproach = null;
   
@@ -85,6 +89,58 @@ const computeConjunction = (satA, satB, positionsA, positionsB) => {
   }
   
   if (minDistance < CONFIG.STORAGE_THRESHOLD_KM) {
+    // Calculate collision probability if enabled
+    let probabilityOfCollision = 0;
+    let riskLevel = getRiskLevel(minDistance);
+    let uncertaintyData = null;
+    
+    if (CONFIG.ENABLE_PC_CALCULATION && timeOfClosestApproach) {
+      try {
+        const collisionAnalysis = await collisionProbabilityEngine.analyzeConjunction(
+          satA,
+          satB,
+          timeOfClosestApproach
+        );
+        
+        if (collisionAnalysis) {
+          probabilityOfCollision = collisionAnalysis.probabilityOfCollision;
+          riskLevel = collisionAnalysis.riskLevel;
+          
+          // Extract uncertainty data for visualization
+          if (collisionAnalysis.uncertaintyData) {
+            const combined = collisionAnalysis.uncertaintyData.combined;
+            if (combined && combined.covariance && combined.covariance.length >= 9) {
+              // Extract eigenvalues for ellipsoid parameters
+              const cov = combined.covariance;
+              const eigenvalues = [
+                Math.sqrt((cov[0] + cov[4] + cov[8]) / 3), // Approximate
+                Math.sqrt((cov[0] + cov[4] + cov[8]) / 3),
+                Math.sqrt((cov[0] + cov[4] + cov[8]) / 3)
+              ].sort((a, b) => b - a);
+              
+              uncertaintyData = {
+                combinedCovariance: combined.covariance,
+                positionUncertainty1Sigma: Math.sqrt(cov[0]) / 1000, // Convert to km
+                positionUncertainty3Sigma: (3 * Math.sqrt(cov[0])) / 1000,
+                ellipsoid1Sigma: {
+                  semiMajor: eigenvalues[0] / 1000,
+                  semiMinor: eigenvalues[1] / 1000,
+                  semiVertical: eigenvalues[2] / 1000
+                },
+                ellipsoid3Sigma: {
+                  semiMajor: (3 * eigenvalues[0]) / 1000,
+                  semiMinor: (3 * eigenvalues[1]) / 1000,
+                  semiVertical: (3 * eigenvalues[2]) / 1000
+                }
+              };
+            }
+          }
+        }
+      } catch (pcError) {
+        console.error('PC calculation error:', pcError.message);
+      }
+    }
+    
     return {
       satA: satA.noradCatId,
       satB: satB.noradCatId,
@@ -92,9 +148,12 @@ const computeConjunction = (satA, satB, positionsA, positionsB) => {
       satBName: satB.name,
       minDistanceKm: minDistance,
       timeOfClosestApproach,
-      riskLevel: getRiskLevel(minDistance),
+      riskLevel,
       altitudeBand: getAltitudeBand(satA.orbitalAltitude || 0),
-      relativeVelocity: calculateRelativeVelocity(satA, satB)
+      relativeVelocity: calculateRelativeVelocity(satA, satB),
+      probabilityOfCollision,
+      probabilityFormatted: collisionProbabilityEngine.formatProbability(probabilityOfCollision),
+      uncertaintyData
     };
   }
   
@@ -210,6 +269,9 @@ const runConjunctionDetection = async () => {
             timeOfClosestApproach: conj.timeOfClosestApproach,
             relativeVelocity: conj.relativeVelocity,
             riskLevel: conj.riskLevel,
+            probabilityOfCollision: conj.probabilityOfCollision || 0,
+            probabilityFormatted: conj.probabilityFormatted || '0',
+            uncertaintyData: conj.uncertaintyData || null,
             createdAt: new Date()
           }
         },
@@ -237,6 +299,9 @@ const runConjunctionDetection = async () => {
               timeOfClosestApproach: conj.timeOfClosestApproach,
               relativeVelocity: conj.relativeVelocity,
               riskLevel: conj.riskLevel,
+              probabilityOfCollision: conj.probabilityOfCollision || 0,
+              probabilityFormatted: conj.probabilityFormatted || '0',
+              uncertaintyData: conj.uncertaintyData || null,
               createdAt: new Date()
             },
             { upsert: true, new: true }

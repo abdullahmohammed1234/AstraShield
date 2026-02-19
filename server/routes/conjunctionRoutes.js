@@ -4,7 +4,8 @@ const {
   runDetection,
   getAll,
   getHighRisk,
-  getStatistics
+  getStatistics,
+  getDetailedAnalysis
 } = require('../controllers/conjunctionController');
 
 // Validation helpers
@@ -27,5 +28,8 @@ router.post('/run', runDetection);
 router.get('/', validateConjunctionQuery, getAll);
 router.get('/high', validateConjunctionQuery, getHighRisk);
 router.get('/stats', getStatistics);
+
+// Detailed analysis route - must be before /:id to avoid conflicts
+router.get('/analysis/:satA/:satB', getDetailedAnalysis);
 
 module.exports = router;

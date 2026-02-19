@@ -4,6 +4,7 @@ import Explorer from './pages/Explorer';
 import Simulation from './pages/Simulation';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
+import Alerts from './pages/Alerts';
 import TopBar from './components/TopBar';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/simulation" element={<Simulation />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/alerts" element={<Alerts />} />
           </Routes>
         </main>
       </div>

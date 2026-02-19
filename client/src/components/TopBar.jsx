@@ -5,6 +5,7 @@ const navItems = [
   { path: '/explorer', label: 'Explorer' },
   { path: '/simulation', label: 'Simulation' },
   { path: '/analytics', label: 'Analytics' },
+  { path: '/alerts', label: 'Alerts' },
   { path: '/admin', label: 'Admin' }
 ];
 

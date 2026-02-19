@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { webhookApi } from '../services/api';
 
 const Admin = () => {
   const [health, setHealth] = useState(null);
   const [circuitBreakers, setCircuitBreakers] = useState(null);
   const [metrics, setMetrics] = useState(null);
+  const [webhooks, setWebhooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('health');
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState(null);
+  const [webhookForm, setWebhookForm] = useState({
+    name: '',
+    type: 'custom',
+    url: '',
+    enabled: true,
+    config: {}
+  });
 
   useEffect(() => {
     fetchData();
@@ -47,6 +57,51 @@ const Admin = () => {
     setLoading(false);
   };
 
+  const fetchWebhooks = async () => {
+    try {
+      const response = await webhookApi.getAll();
+      setWebhooks(response.data.data || response.data);
+    } catch (err) {
+      console.error('Failed to fetch webhooks:', err);
+    }
+  };
+
+  const handleSaveWebhook = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingWebhook) {
+        await webhookApi.update(editingWebhook._id, webhookForm);
+      } else {
+        await webhookApi.create(webhookForm);
+      }
+      setShowWebhookModal(false);
+      setEditingWebhook(null);
+      setWebhookForm({ name: '', type: 'custom', url: '', enabled: true, config: {} });
+      fetchWebhooks();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteWebhook = async (id) => {
+    if (!confirm('Are you sure you want to delete this webhook?')) return;
+    try {
+      await webhookApi.delete(id);
+      fetchWebhooks();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleTestWebhook = async (id) => {
+    try {
+      await webhookApi.test(id);
+      alert('Test notification sent!');
+    } catch (err) {
+      alert('Test failed: ' + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -80,10 +135,13 @@ const Admin = () => {
 
       {/* Tab Navigation */}
       <div className="flex gap-2 mb-6">
-        {['health', 'circuit-breakers', 'metrics'].map(tab => (
+        {['health', 'circuit-breakers', 'metrics', 'webhooks'].map(tab => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              if (tab === 'webhooks') fetchWebhooks();
+            }}
             className="px-4 py-2 rounded-lg capitalize transition-colors"
             style={{
               backgroundColor: activeTab === tab ? '#00d4ff' : '#1a1a2e',
@@ -223,6 +281,167 @@ const Admin = () => {
               <p className="text-gray-400">Metrics data unavailable</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Webhooks Tab */}
+      {activeTab === 'webhooks' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-white">Webhook Configurations</h2>
+            <button
+              onClick={() => {
+                setEditingWebhook(null);
+                setWebhookForm({ name: '', type: 'custom', url: '', enabled: true, config: {} });
+                setShowWebhookModal(true);
+              }}
+              className="px-4 py-2 rounded-lg text-white"
+              style={{ backgroundColor: '#00d4ff' }}
+            >
+              Add Webhook
+            </button>
+          </div>
+
+          {webhooks.length === 0 ? (
+            <div className="bg-gray-800 rounded-lg p-8 text-center">
+              <p className="text-gray-400">No webhooks configured</p>
+              <p className="text-gray-500 text-sm mt-2">Add a webhook to receive external notifications</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {webhooks.map((webhook) => (
+                <div key={webhook._id} className="bg-gray-800 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-white">{webhook.name}</h3>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            webhook.enabled ? 'bg-green-900 text-green-400' : 'bg-gray-700 text-gray-400'
+                          }`}
+                        >
+                          {webhook.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-900 text-blue-400">
+                          {webhook.type}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 font-mono">{webhook.url}</p>
+                      {webhook.stats && (
+                        <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                          <span>Sent: {webhook.stats.totalSent}</span>
+                          <span>Success: {webhook.stats.totalSuccessful}</span>
+                          <span>Failed: {webhook.stats.totalFailed}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleTestWebhook(webhook._id)}
+                        className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm text-white"
+                      >
+                        Test
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingWebhook(webhook);
+                          setWebhookForm({
+                            name: webhook.name,
+                            type: webhook.type,
+                            url: webhook.url,
+                            enabled: webhook.enabled,
+                            config: webhook.config || {}
+                          });
+                          setShowWebhookModal(true);
+                        }}
+                        className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-sm text-white"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWebhook(webhook._id)}
+                        className="px-3 py-1 bg-red-700 hover:bg-red-600 rounded text-sm text-white"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Webhook Modal */}
+      {showWebhookModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowWebhookModal(false)}>
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-white mb-4">
+              {editingWebhook ? 'Edit Webhook' : 'Add Webhook'}
+            </h2>
+            <form onSubmit={handleSaveWebhook} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={webhookForm.name}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-700 rounded text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Type</label>
+                <select
+                  value={webhookForm.type}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, type: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-700 rounded text-white"
+                >
+                  <option value="slack">Slack</option>
+                  <option value="pagerduty">PagerDuty</option>
+                  <option value="email">Email</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">URL</label>
+                <input
+                  type="url"
+                  value={webhookForm.url}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, url: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-700 rounded text-white"
+                  required
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="enabled"
+                  checked={webhookForm.enabled}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, enabled: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="enabled" className="text-sm text-gray-400">Enabled</label>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 rounded text-white"
+                  style={{ backgroundColor: '#00d4ff' }}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowWebhookModal(false)}
+                  className="px-4 py-2 bg-gray-700 rounded text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
