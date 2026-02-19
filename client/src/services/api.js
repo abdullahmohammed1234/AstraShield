@@ -58,7 +58,16 @@ export const riskApi = {
   getCongestion: () => api.get('/risk/congestion'),
   getClusters: () => api.get('/risk/clusters'),
   getDensity: () => api.get('/risk/density'),
-  simulate: (data) => api.post('/risk/simulate', data)
+  simulate: (data) => api.post('/risk/simulate', data),
+  // Historical risk trends
+  getTrends: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/risk/trends${queryParams ? `?${queryParams}` : ''}`);
+  },
+  getSeasonalAnalysis: (years = 2) => api.get(`/risk/seasonal?years=${years}`),
+  getLatestSnapshot: (type = 'daily') => api.get(`/risk/latest?type=${type}`),
+  createSnapshot: (type = 'daily') => api.post('/risk/snapshot', { type }),
+  generateSampleData: (days = 90) => api.post(`/risk/generate-sample?days=${days}`)
 };
 
 export const conjunctionApi = {

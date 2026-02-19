@@ -39,6 +39,13 @@ const validateRiskQuery = (req, res, next) => {
 router.post('/simulate', validateSimulateRequest, riskController.simulateAdjustment);
 router.get('/', validateRiskQuery, riskController.getRisks);
 
+// Historical risk trends endpoints
+router.post('/snapshot', riskController.createSnapshot);
+router.get('/trends', riskController.getRiskTrends);
+router.get('/seasonal', riskController.getSeasonalAnalysis);
+router.get('/latest', riskController.getLatestSnapshot);
+router.post('/generate-sample', riskController.generateSampleData);
+
 // Other routes
 router.post('/calculate', riskController.calculateRisks);
 router.get('/alerts', riskController.getHighRiskAlerts);

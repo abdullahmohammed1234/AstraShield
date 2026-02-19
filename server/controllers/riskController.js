@@ -1,6 +1,7 @@
 const Satellite = require('../models/Satellite');
 const { calculateAllRiskScores, getHighRiskSatellites, getRiskStatistics } = require('../services/riskEngine');
 const { clusterByAltitude, findHighDensityRegions, calculateClusterPositions } = require('../utils/congestionCluster');
+const riskSnapshotService = require('../services/riskSnapshotService');
 
 const calculateRisks = async (req, res) => {
   try {
@@ -116,6 +117,62 @@ const simulateAdjustment = async (req, res) => {
   }
 };
 
+// Historical risk trends endpoints
+const createSnapshot = async (req, res) => {
+  try {
+    const { type = 'daily' } = req.body;
+    const snapshot = await riskSnapshotService.createDailySnapshot();
+    res.json({ success: true, data: snapshot });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const getRiskTrends = async (req, res) => {
+  try {
+    const { type = 'daily', days = 30, startDate, endDate } = req.query;
+    const trends = await riskSnapshotService.getRiskTrends({
+      type,
+      days: parseInt(days),
+      startDate,
+      endDate
+    });
+    res.json({ success: true, count: trends.length, data: trends });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const getSeasonalAnalysis = async (req, res) => {
+  try {
+    const { years = 2 } = req.query;
+    const analysis = await riskSnapshotService.getSeasonalAnalysis(parseInt(years));
+    res.json({ success: true, data: analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const getLatestSnapshot = async (req, res) => {
+  try {
+    const { type = 'daily' } = req.query;
+    const snapshot = await riskSnapshotService.getLatestSnapshot(type);
+    res.json({ success: true, data: snapshot });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const generateSampleData = async (req, res) => {
+  try {
+    const { days = 90 } = req.query;
+    const result = await riskSnapshotService.generateSampleData(parseInt(days));
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   calculateRisks,
   getRisks,
@@ -124,5 +181,10 @@ module.exports = {
   getCongestionData,
   getClusterPositions,
   getHighDensityRegions,
-  simulateAdjustment
+  simulateAdjustment,
+  createSnapshot,
+  getRiskTrends,
+  getSeasonalAnalysis,
+  getLatestSnapshot,
+  generateSampleData
 };
