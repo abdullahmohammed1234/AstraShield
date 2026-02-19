@@ -5,6 +5,7 @@ import Simulation from './pages/Simulation';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
 import Alerts from './pages/Alerts';
+import Reentry from './pages/Reentry';
 import TopBar from './components/TopBar';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/alerts" element={<Alerts />} />
+            <Route path="/reentry" element={<Reentry />} />
           </Routes>
         </main>
       </div>

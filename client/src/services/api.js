@@ -92,4 +92,15 @@ export const webhookApi = {
   test: (webhookId) => api.post(`/alerts/webhooks/${webhookId}/test`)
 };
 
+export const reentryApi = {
+  getAll: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/reentry${queryParams ? `?${queryParams}` : ''}`);
+  },
+  getById: (noradCatId) => api.get(`/reentry/${noradCatId}`),
+  getAlerts: () => api.get('/reentry/alerts'),
+  getStatistics: () => api.get('/reentry/statistics'),
+  getOrbitalParams: (noradCatId) => api.get(`/reentry/orbital/${noradCatId}`)
+};
+
 export default api;

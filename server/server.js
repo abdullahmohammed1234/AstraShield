@@ -9,11 +9,13 @@ const satelliteRoutes = require('./routes/satelliteRoutes');
 const riskRoutes = require('./routes/riskRoutes');
 const conjunctionRoutes = require('./routes/conjunctionRoutes');
 const alertRoutes = require('./routes/alertRoutes');
+const reentryRoutes = require('./routes/reentryRoutes');
 const { fetchAndStoreTLE } = require('./services/tleFetcher');
 const { calculateAllRiskScores, calculateAllRiskScoresWithConjunctions } = require('./services/riskEngine');
 const { runConjunctionDetection, getHighRiskConjunctions } = require('./services/conjunctionEngine');
 const { processNewConjunctions } = require('./services/alertService');
 const { runEscalationCheck, setWebSocketServer } = require('./services/alertService');
+const { processReentryAlerts } = require('./services/reentryAlertService');
 const Satellite = require('./models/Satellite');
 
 // Import resilience utilities
@@ -77,6 +79,7 @@ app.use('/api/satellites', satelliteRoutes);
 app.use('/api/risk', riskRoutes);
 app.use('/api/conjunctions', conjunctionRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/reentry', reentryRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -161,6 +164,17 @@ cron.schedule('0 */6 * * *', async () => {
     logger.info('Conjunction detection completed', { job: 'conjunction-detection' });
   } catch (error) {
     logger.error('Conjunction detection failed', { job: 'conjunction-detection', error: error.message });
+  }
+});
+
+// Reentry prediction check every 4 hours
+cron.schedule('0 */4 * * *', async () => {
+  logger.info('Starting scheduled reentry prediction check...', { job: 'reentry-check' });
+  try {
+    await processReentryAlerts();
+    logger.info('Reentry prediction check completed', { job: 'reentry-check' });
+  } catch (error) {
+    logger.error('Reentry prediction check failed', { job: 'reentry-check', error: error.message });
   }
 });
 
