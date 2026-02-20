@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const riskController = require('../controllers/riskController');
+const maneuverController = require('../controllers/maneuverController');
 
 // Validation helpers
 const validateSimulateRequest = (req, res, next) => {
@@ -38,6 +39,10 @@ const validateRiskQuery = (req, res, next) => {
 // Apply validation
 router.post('/simulate', validateSimulateRequest, riskController.simulateAdjustment);
 router.get('/', validateRiskQuery, riskController.getRisks);
+
+// Maneuver analysis endpoints
+router.get('/maneuvers/:noradCatId', maneuverController.getManeuverOptions);
+router.post('/maneuvers/compare', maneuverController.compareManeuvers);
 
 // Historical risk trends endpoints
 router.post('/snapshot', riskController.createSnapshot);

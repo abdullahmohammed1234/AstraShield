@@ -10,6 +10,7 @@ export default {
         'deep-space': '#0B0F1A',
         'cosmic-blue': '#1E3A8A',
         'neon-cyan': '#22D3EE',
+        'neon-green': '#10B981',
         'solar-amber': '#F59E0B',
         'alert-red': '#EF4444',
         'space-dark': '#05070D',

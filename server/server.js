@@ -10,6 +10,7 @@ const riskRoutes = require('./routes/riskRoutes');
 const conjunctionRoutes = require('./routes/conjunctionRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const reentryRoutes = require('./routes/reentryRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const { fetchAndStoreTLE } = require('./services/tleFetcher');
 const { calculateAllRiskScores, calculateAllRiskScoresWithConjunctions } = require('./services/riskEngine');
 const { runConjunctionDetection, getHighRiskConjunctions } = require('./services/conjunctionEngine');
@@ -80,6 +81,7 @@ app.use('/api/risk', riskRoutes);
 app.use('/api/conjunctions', conjunctionRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/reentry', reentryRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -59,6 +59,9 @@ export const riskApi = {
   getClusters: () => api.get('/risk/clusters'),
   getDensity: () => api.get('/risk/density'),
   simulate: (data) => api.post('/risk/simulate', data),
+  // Maneuver analysis
+  getManeuverOptions: (noradCatId) => api.get(`/risk/maneuvers/${noradCatId}`),
+  compareManeuvers: (data) => api.post('/risk/maneuvers/compare', data),
   // Historical risk trends
   getTrends: (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
