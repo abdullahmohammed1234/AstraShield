@@ -73,6 +73,23 @@ export const riskApi = {
   generateSampleData: (days = 90) => api.post(`/risk/generate-sample?days=${days}`)
 };
 
+export const launchWindowApi = {
+  analyze: (data) => api.post('/launch-window/analyze', data),
+  getScore: (data) => api.post('/launch-window/score', data),
+  findWindows: (data) => api.post('/launch-window/windows', data),
+  getDebrisDensity: (altitude) => api.get(`/launch-window/debris/${altitude}`),
+  analyzeInclination: (degrees) => api.get(`/launch-window/inclination/${degrees}`),
+  getOptimalAltitudes: (inclination) => api.get(`/launch-window/altitudes/${inclination}`)
+};
+
+export const webhookApi = {
+  getAll: () => api.get('/webhooks'),
+  create: (config) => api.post('/webhooks', config),
+  update: (id, config) => api.put(`/webhooks/${id}`, config),
+  delete: (id) => api.delete(`/webhooks/${id}`),
+  test: (id) => api.post(`/webhooks/${id}/test`)
+};
+
 export const conjunctionApi = {
   getAll: (limit = 100) => api.get(`/conjunctions?limit=${Math.min(limit, 500)}`),
   getHighRisk: (level = 'high') => api.get(`/conjunctions/high?level=${level}`),
@@ -82,37 +99,29 @@ export const conjunctionApi = {
 };
 
 export const alertApi = {
-  getAll: (params = {}) => {
-    const queryParams = new URLSearchParams(params).toString();
-    return api.get(`/alerts${queryParams ? `?${queryParams}` : ''}`);
-  },
-  getById: (alertId) => api.get(`/alerts/${alertId}`),
-  acknowledge: (alertId, data) => api.post(`/alerts/${alertId}/acknowledge`, data),
-  escalate: (alertId, data) => api.post(`/alerts/${alertId}/escalate`, data),
-  resolve: (alertId, data) => api.post(`/alerts/${alertId}/resolve`, data),
-  close: (alertId, data) => api.post(`/alerts/${alertId}/close`, data),
-  getStatistics: () => api.get('/alerts/statistics'),
-  getUnacknowledged: () => api.get('/alerts/unacknowledged')
-};
-
-export const webhookApi = {
-  getAll: () => api.get('/alerts/webhooks'),
-  getById: (webhookId) => api.get(`/alerts/webhooks/${webhookId}`),
-  create: (data) => api.post('/alerts/webhooks', data),
-  update: (webhookId, data) => api.put(`/alerts/webhooks/${webhookId}`, data),
-  delete: (webhookId) => api.delete(`/alerts/webhooks/${webhookId}`),
-  test: (webhookId) => api.post(`/alerts/webhooks/${webhookId}/test`)
+  getAll: (limit = 50) => api.get(`/alerts?limit=${Math.min(limit, 200)}`),
+  getUnread: () => api.get('/alerts/unread'),
+  markAsRead: (id) => api.put(`/alerts/${id}/read`),
+  markAllAsRead: () => api.put('/alerts/read-all'),
+  delete: (id) => api.delete(`/alerts/${id}`),
+  getStatistics: () => api.get('/alerts/stats'),
+  configure: (config) => api.post('/alerts/configure', config),
+  getConfig: () => api.get('/alerts/config')
 };
 
 export const reentryApi = {
-  getAll: (params = {}) => {
-    const queryParams = new URLSearchParams(params).toString();
-    return api.get(`/reentry${queryParams ? `?${queryParams}` : ''}`);
-  },
-  getById: (noradCatId) => api.get(`/reentry/${noradCatId}`),
-  getAlerts: () => api.get('/reentry/alerts'),
-  getStatistics: () => api.get('/reentry/statistics'),
-  getOrbitalParams: (noradCatId) => api.get(`/reentry/orbital/${noradCatId}`)
+  getAll: (limit = 50) => api.get(`/reentry?limit=${Math.min(limit, 500)}`),
+  getUpcoming: (days = 7) => api.get(`/reentry/upcoming?days=${days}`),
+  getStatistics: () => api.get('/reentry/stats'),
+  getById: (id) => api.get(`/reentry/${id}`)
+};
+
+export const reportApi = {
+  generate: (type) => api.post('/reports/generate', { type }),
+  getAll: (limit = 20) => api.get(`/reports?limit=${Math.min(limit, 100)}`),
+  getById: (id) => api.get(`/reports/${id}`),
+  download: (id) => api.get(`/reports/${id}/download`, { responseType: 'blob' }),
+  delete: (id) => api.delete(`/reports/${id}`)
 };
 
 export default api;

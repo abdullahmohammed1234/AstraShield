@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { satelliteApi, riskApi } from '../services/api';
+import LaunchWindowAnalyzer from '../components/LaunchWindowAnalyzer';
 
 const Simulation = () => {
   const [satellites, setSatellites] = useState([]);
@@ -10,7 +11,7 @@ const Simulation = () => {
   const [maneuverAnalysis, setManeuverAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [viewMode, setViewMode] = useState('single'); // 'single' or 'compare'
+  const [viewMode, setViewMode] = useState('single'); // 'single', 'compare', or 'launch-window'
   const [customScenarios, setCustomScenarios] = useState([]); // Custom scenarios with persistence
   const [showAddScenario, setShowAddScenario] = useState(false);
   const [newScenario, setNewScenario] = useState({ altitude: 400, inclination: 0, name: '' });
@@ -223,16 +224,26 @@ const Simulation = () => {
             >
               Multi-Scenario Compare
             </button>
+            <button
+              onClick={() => setViewMode('launch-window')}
+              className={`px-4 py-2 rounded-lg font-orbitron text-sm transition-all ${
+                viewMode === 'launch-window'
+                  ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/50'
+                  : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              Launch Window
+            </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Satellite Selection */}
-          <div className="glass-card p-4">
+          <div className="glass-card p-4 h-fit lg:sticky lg:top-4">
             <h2 className="font-orbitron text-lg font-semibold text-white mb-4">
               SELECT SATELLITE
             </h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
               {satellites.map((sat) => (
                 <div
                   key={sat.noradCatId}
@@ -375,6 +386,9 @@ const Simulation = () => {
                   </div>
                 )}
               </>
+            ) : viewMode === 'launch-window' ? (
+              // Launch Window Analyzer
+              <LaunchWindowAnalyzer />
             ) : (
               // Multi-Scenario Compare Mode
               <>
