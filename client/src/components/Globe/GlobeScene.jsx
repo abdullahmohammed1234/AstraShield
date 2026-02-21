@@ -1,9 +1,10 @@
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars, Preload } from '@react-three/drei';
 import Earth from './Earth';
 import Satellite from './Satellite';
 import OrbitPath from './OrbitPath';
+import TrajectoryForecast3D, { TimeSlider, AnimationControls } from './TrajectoryForecast3D';
 
 const StarsBackground = () => {
   return (
@@ -25,8 +26,13 @@ const GlobeScene = ({
   onSatelliteClick = () => {},
   selectedConjunction = null,
   autoRotate = true,
-  showOrbits = false
+  showOrbits = false,
+  showForecast = true,
+  showConjunctionAnimation = true
 }) => {
+  const [timeOffset, setTimeOffset] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState(1);
   const displaySatellites = useMemo(() => {
     return satellites.slice(0, 300);
   }, [satellites]);
@@ -57,7 +63,7 @@ const GlobeScene = ({
   }, [selectedConjunction, satellites]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
       <Canvas
         camera={{ position: [0, 0, 6], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
@@ -112,6 +118,21 @@ const GlobeScene = ({
             />
           )}
           
+          {/* Trajectory Forecast Visualization */}
+          <TrajectoryForecast3D
+            satellites={displaySatellites}
+            selectedSatellite={selectedSatellite}
+            selectedConjunction={selectedConjunction}
+            showForecast={showForecast}
+            showConjunctionAnimation={showConjunctionAnimation}
+            timeOffset={timeOffset}
+            isPlaying={isPlaying}
+            animationSpeed={animationSpeed}
+            onTimeOffsetChange={setTimeOffset}
+            onIsPlayingChange={setIsPlaying}
+            onAnimationSpeedChange={setAnimationSpeed}
+          />
+          
           <OrbitControls
             enablePan={true}
             enableZoom={true}
@@ -124,6 +145,28 @@ const GlobeScene = ({
           <Preload all />
         </Suspense>
       </Canvas>
+      
+      {/* Forecast Time Controls */}
+      {(showForecast || showConjunctionAnimation) && (
+        <>
+          <AnimationControls
+            isPlaying={isPlaying}
+            onPlayPause={() => setIsPlaying(!isPlaying)}
+            speed={animationSpeed}
+            onSpeedChange={setAnimationSpeed}
+            onReset={() => {
+              setIsPlaying(false);
+              setTimeOffset(0);
+            }}
+          />
+          <TimeSlider
+            value={timeOffset}
+            max={24}
+            onChange={setTimeOffset}
+            label={selectedConjunction ? 'Time to TCA' : 'Forecast Hours Ahead'}
+          />
+        </>
+      )}
     </div>
   );
 };

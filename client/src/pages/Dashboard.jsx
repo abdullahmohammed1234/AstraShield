@@ -94,7 +94,9 @@ const Dashboard = () => {
                 onSatelliteClick={handleSatelliteClick}
                 selectedConjunction={selectedConjunction}
                 autoRotate={true}
-                showOrbits={!!selectedSatellite}
+                showOrbits={false}
+                showForecast={true}
+                showConjunctionAnimation={true}
               />
               
               <div className="absolute bottom-4 left-4 glass-card px-4 py-2">
