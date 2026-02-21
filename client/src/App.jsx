@@ -6,6 +6,7 @@ import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
 import Alerts from './pages/Alerts';
 import Reentry from './pages/Reentry';
+import MLPrediction from './pages/MLPrediction';
 import TopBar from './components/TopBar';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route path="/admin" element={<Admin />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/reentry" element={<Reentry />} />
+            <Route path="/ml-prediction" element={<MLPrediction />} />
           </Routes>
         </main>
       </div>

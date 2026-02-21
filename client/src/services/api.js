@@ -124,4 +124,28 @@ export const reportApi = {
   delete: (id) => api.delete(`/reports/${id}`)
 };
 
+export const mlPredictionApi = {
+  // Risk predictions
+  getPredictions: (horizons = '24h,48h,72h') => 
+    api.get(`/ml/predictions?horizons=${horizons}`),
+  getHighRiskPeriods: (days = 7) => 
+    api.get(`/ml/high-risk-periods?days=${days}`),
+  getPredictionHistory: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/ml/predictions/history${queryParams ? `?${queryParams}` : ''}`);
+  },
+  
+  // Anomaly detection
+  detectAllAnomalies: (limit = 100) => 
+    api.get(`/ml/anomalies?limit=${limit}`),
+  detectSatelliteAnomalies: (noradCatId) => 
+    api.get(`/ml/anomalies/${noradCatId}`),
+  getAnomalyHistory: (noradCatId, days = 7) => 
+    api.get(`/ml/anomalies/${noradCatId}/history?days=${days}`),
+  
+  // Model management
+  getModelStatus: () => api.get('/ml/status'),
+  retrainModels: () => api.post('/ml/retrain')
+};
+
 export default api;

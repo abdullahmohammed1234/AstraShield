@@ -12,6 +12,7 @@ const alertRoutes = require('./routes/alertRoutes');
 const reentryRoutes = require('./routes/reentryRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const launchWindowRoutes = require('./routes/launchWindowRoutes');
+const mlPredictionRoutes = require('./routes/mlPredictionRoutes');
 const { fetchAndStoreTLE } = require('./services/tleFetcher');
 const { calculateAllRiskScores, calculateAllRiskScoresWithConjunctions } = require('./services/riskEngine');
 const { runConjunctionDetection, getHighRiskConjunctions } = require('./services/conjunctionEngine');
@@ -84,6 +85,7 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/reentry', reentryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/launch-window', launchWindowRoutes);
+app.use('/api/ml', mlPredictionRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -258,7 +260,7 @@ setWebSocketServer(wss);
 
 logger.info('WebSocket server initialized', { path: '/ws/alerts' });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   logger.info(`AstraShield Server started`, {
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
@@ -269,10 +271,22 @@ server.listen(PORT, () => {
       '/api/risk',
       '/api/conjunctions',
       '/api/alerts',
+      '/api/ml',
       '/api/health',
       '/api/health/circuit-breakers'
     ]
   });
+
+  // Initialize ML models after server starts (non-blocking)
+  setTimeout(async () => {
+    try {
+      const mlPredictor = require('./services/ml/riskPredictor');
+      await mlPredictor.initialize();
+      logger.info('ML Risk Predictor initialized', { job: 'ml-init' });
+    } catch (error) {
+      logger.warn('ML initialization deferred', { job: 'ml-init', error: error.message });
+    }
+  }, 5000); // Wait 5 seconds after startup to let DB settle
 });
 
 module.exports = app;

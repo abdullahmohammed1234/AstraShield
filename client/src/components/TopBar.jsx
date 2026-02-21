@@ -6,6 +6,7 @@ const navItems = [
   { path: '/simulation', label: 'Simulation' },
   { path: '/analytics', label: 'Analytics' },
   { path: '/reentry', label: 'Re-Entry' },
+  { path: '/ml-prediction', label: 'ML Risk' },
   { path: '/alerts', label: 'Alerts' },
   { path: '/admin', label: 'Admin' }
 ];
