@@ -1,42 +1,50 @@
-import { useState, useEffect, useCallback } from 'react';
-import GlobeScene from '../components/Globe/GlobeScene';
+import { useState, useCallback, Suspense, lazy } from 'react';
 import ConjunctionPanel from '../components/Dashboard/ConjunctionPanel';
-import { satelliteApi, riskApi } from '../services/api';
+import { useSatellitePositions, useSatelliteStatistics, useRiskAlerts } from '../hooks/useQueries';
+
+// Lazy load the heavy GlobeScene component for better initial load performance
+const GlobeScene = lazy(() => import('../components/Globe/GlobeScene'));
+
+// Loading fallback for GlobeScene
+const GlobeSceneFallback = () => (
+  <div className="w-full h-full flex items-center justify-center bg-deep-space/50">
+    <div className="flex flex-col items-center">
+      <div className="w-12 h-12 border-4 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin"></div>
+      <p className="mt-4 text-white/70">Loading 3D visualization...</p>
+    </div>
+  </div>
+);
 
 const Dashboard = () => {
-  const [satellites, setSatellites] = useState([]);
-  const [stats, setStats] = useState({ total: 0, byAltitude: {}, byRisk: {} });
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedSatellite, setSelectedSatellite] = useState(null);
   const [selectedConjunction, setSelectedConjunction] = useState(null);
-  const [error, setError] = useState(null);
+  
+  // Use React Query hooks for automatic caching and revalidation
+  const { 
+    data: positionsData, 
+    isLoading: positionsLoading, 
+    isError: positionsError,
+    refetch: refetchPositions 
+  } = useSatellitePositions(300);
+  
+  const { 
+    data: statsData, 
+    isLoading: statsLoading 
+  } = useSatelliteStatistics();
+  
+  const { 
+    data: alertsData, 
+    isLoading: alertsLoading 
+  } = useRiskAlerts();
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [positionsRes, statsRes, alertsRes] = await Promise.all([
-        satelliteApi.getPositions(300),
-        satelliteApi.getStatistics(),
-        riskApi.getAlerts()
-      ]);
-
-      setSatellites(positionsRes.data.data || []);
-      setStats(statsRes.data.data || { total: 0, byAltitude: {}, byRisk: {} });
-      setAlerts(alertsRes.data.data || []);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('Failed to load satellite data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const satellites = positionsData?.data || [];
+  const stats = statsData?.data || { total: 0, byAltitude: {}, byRisk: {} };
+  const alerts = alertsData?.data || [];
 
   const fetchOrbitPath = useCallback(async (sat) => {
     if (!sat || !sat.noradCatId) return null;
     try {
+      const { satelliteApi } = await import('../services/api');
       const orbitRes = await satelliteApi.getOrbit(sat.noradCatId);
       return orbitRes.data.data || null;
     } catch (err) {
@@ -44,12 +52,6 @@ const Dashboard = () => {
       return null;
     }
   }, []);
-
-  useEffect(() => {
-    fetchData();
-    const intervalId = setInterval(fetchData, 10000);
-    return () => clearInterval(intervalId);
-  }, [fetchData]);
 
   const handleSatelliteClick = async (sat) => {
     const orbit = await fetchOrbitPath(sat);
@@ -61,6 +63,8 @@ const Dashboard = () => {
     if (score < 0.6) return 'text-solar-amber';
     return 'text-alert-red';
   };
+
+  const loading = positionsLoading || statsLoading || alertsLoading;
 
   return (
     <div className="min-h-screen p-6">
@@ -77,27 +81,29 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {error && (
+              {positionsError && (
                 <div className="absolute inset-0 flex items-center justify-center z-10">
                   <div className="text-center">
-                    <p className="text-alert-red mb-4">{error}</p>
-                    <button onClick={fetchData} className="neon-button">
+                    <p className="text-alert-red mb-4">Failed to load satellite data</p>
+                    <button onClick={() => refetchPositions()} className="neon-button">
                       Retry
                     </button>
                   </div>
                 </div>
               )}
               
-              <GlobeScene
-                satellites={satellites}
-                selectedSatellite={selectedSatellite}
-                onSatelliteClick={handleSatelliteClick}
-                selectedConjunction={selectedConjunction}
-                autoRotate={true}
-                showOrbits={false}
-                showForecast={true}
-                showConjunctionAnimation={true}
-              />
+              <Suspense fallback={<GlobeSceneFallback />}>
+                <GlobeScene
+                  satellites={satellites}
+                  selectedSatellite={selectedSatellite}
+                  onSatelliteClick={handleSatelliteClick}
+                  selectedConjunction={selectedConjunction}
+                  autoRotate={true}
+                  showOrbits={false}
+                  showForecast={true}
+                  showConjunctionAnimation={true}
+                />
+              </Suspense>
               
               <div className="absolute top-4 left-4 glass-card px-4 py-2">
                 <div className="flex items-center space-x-4 text-xs">

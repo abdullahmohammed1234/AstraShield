@@ -1,54 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { alertApi } from '../services/api';
+import { useAlerts, useAlertStatistics } from '../hooks/useQueries';
 import { useAlertWebSocket } from '../hooks/useAlertWebSocket';
 import { colors } from '../theme/colors';
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState([]);
-  const [statistics, setStatistics] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [mergedAlerts, setMergedAlerts] = useState([]);
 
   const { isConnected, alerts: wsAlerts } = useAlertWebSocket();
-
-  const fetchAlerts = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = {};
-      if (filter !== 'all') {
-        params.status = filter;
-      }
-      const response = await alertApi.getAll(params);
-      setAlerts(response.data.data || response.data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
-
-  const fetchStatistics = useCallback(async () => {
-    try {
-      const response = await alertApi.getStatistics();
-      setStatistics(response.data.data || response.data);
-    } catch (err) {
-      console.error('Failed to fetch statistics:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAlerts();
-    fetchStatistics();
-  }, [fetchAlerts, fetchStatistics]);
+  
+  // Use React Query hooks
+  const { data: alertsData, isLoading, error, refetch } = useAlerts(50);
+  const { data: statsData, refetch: refetchStats } = useAlertStatistics();
+  
+  // Get alerts from API data
+  const alerts = alertsData?.data || [];
+  
+  // Use merged alerts if available, otherwise use API data
+  const displayAlerts = wsAlerts.length > 0 ? mergedAlerts : alerts;
+  const statistics = statsData?.data || null;
 
   // Merge WebSocket alerts with fetched alerts
   useEffect(() => {
-    if (wsAlerts.length > 0) {
-      setAlerts((prev) => {
-        const merged = [...prev];
+    if (wsAlerts.length > 0 && !isLoading) {
+      setMergedAlerts(() => {
+        const merged = [...alerts];
         wsAlerts.forEach((wsAlert) => {
           const index = merged.findIndex((a) => a.alertId === wsAlert.alertId);
           if (index >= 0) {
@@ -60,7 +39,7 @@ const Alerts = () => {
         return merged;
       });
     }
-  }, [wsAlerts]);
+  }, [wsAlerts, alerts, isLoading]);
 
   const handleAcknowledge = async (alertId) => {
     try {
@@ -69,10 +48,10 @@ const Alerts = () => {
         acknowledgedBy: 'User',
         note: 'Acknowledged from dashboard'
       });
-      await fetchAlerts();
-      await fetchStatistics();
+      refetch();
+      refetchStats();
     } catch (err) {
-      setError(err.message);
+      console.error('Failed to acknowledge alert:', err);
     } finally {
       setActionLoading(false);
     }
@@ -85,10 +64,10 @@ const Alerts = () => {
         resolvedBy: 'User',
         note: 'Resolved from dashboard'
       });
-      await fetchAlerts();
-      await fetchStatistics();
+      refetch();
+      refetchStats();
     } catch (err) {
-      setError(err.message);
+      console.error('Failed to resolve alert:', err);
     } finally {
       setActionLoading(false);
     }
@@ -209,20 +188,20 @@ const Alerts = () => {
       )}
 
       {/* Loading */}
-      {loading && (
+      {isLoading && (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
 
       {/* Alert List */}
-      {!loading && filteredAlerts.length === 0 && (
+      {!isLoading && filteredAlerts.length === 0 && (
         <div className="bg-space-card rounded-lg p-8 text-center text-gray-400">
           No alerts found
         </div>
       )}
 
-      {!loading && filteredAlerts.length > 0 && (
+      {!isLoading && filteredAlerts.length > 0 && (
         <div className="space-y-4">
           {filteredAlerts.map((alert) => (
             <div

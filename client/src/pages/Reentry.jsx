@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { reentryApi } from '../services/api';
+import { useReentryData, useReentryStatistics } from '../hooks/useQueries';
 import { useAlertWebSocket } from '../hooks/useAlertWebSocket';
 import { colors } from '../theme/colors';
 
@@ -14,46 +15,43 @@ const Reentry = () => {
   const [view, setView] = useState('predictions'); // 'predictions' | 'alerts'
 
   const { isConnected, alerts: wsAlerts } = useAlertWebSocket();
+  
+  // Use React Query hooks
+  const { data: reentryData, isLoading: reentryLoading, refetch: refetchReentry } = useReentryData(50);
+  const { data: statsData, refetch: refetchStats } = useReentryStatistics();
+  
+  const fetchedPredictions = reentryData?.data || [];
+  const fetchedStatistics = statsData?.data || null;
 
-  const fetchPredictions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = {};
-      if (filter !== 'all') {
-        params.status = filter;
-      }
-      const response = await reentryApi.getAll(params);
-      setPredictions(response.data.data || response.data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
+  // Update local state from React Query
+  useEffect(() => {
+    if (!reentryLoading) {
+      setPredictions(fetchedPredictions);
       setLoading(false);
     }
-  }, [filter]);
+  }, [reentryLoading, fetchedPredictions]);
 
-  const fetchAlerts = useCallback(async () => {
+  useEffect(() => {
+    if (fetchedStatistics) {
+      setStatistics(fetchedStatistics);
+    }
+  }, [fetchedStatistics]);
+
+  // Fetch alerts from risk API (reentry doesn't have getAlerts)
+  const fetchAlerts = async () => {
     try {
-      const response = await reentryApi.getAlerts();
+      // Use riskApi instead of reentryApi for alerts
+      const { riskApi } = await import('../services/api');
+      const response = await riskApi.getAlerts();
       setAlerts(response.data.data || response.data);
     } catch (err) {
       console.error('Failed to fetch reentry alerts:', err);
     }
-  }, []);
-
-  const fetchStatistics = useCallback(async () => {
-    try {
-      const response = await reentryApi.getStatistics();
-      setStatistics(response.data.data || response.data);
-    } catch (err) {
-      console.error('Failed to fetch statistics:', err);
-    }
-  }, []);
+  };
 
   useEffect(() => {
-    fetchPredictions();
     fetchAlerts();
-    fetchStatistics();
-  }, [fetchPredictions, fetchAlerts, fetchStatistics]);
+  }, []);
 
   // Merge WebSocket alerts with fetched alerts
   useEffect(() => {

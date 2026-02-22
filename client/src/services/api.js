@@ -93,7 +93,7 @@ export const webhookApi = {
 export const conjunctionApi = {
   getAll: (limit = 100) => api.get(`/conjunctions?limit=${Math.min(limit, 500)}`),
   getHighRisk: (level = 'high') => api.get(`/conjunctions/high?level=${level}`),
-  getStatistics: () => api.get('/conjunctions/stats'),
+  getStatistics: () => api.get('/conjunctions/statistics'),
   runDetection: () => api.post('/conjunctions/run'),
   getDetailedAnalysis: (satA, satB) => api.get(`/conjunctions/analysis/${satA}/${satB}`)
 };
@@ -104,7 +104,7 @@ export const alertApi = {
   markAsRead: (id) => api.put(`/alerts/${id}/read`),
   markAllAsRead: () => api.put('/alerts/read-all'),
   delete: (id) => api.delete(`/alerts/${id}`),
-  getStatistics: () => api.get('/alerts/stats'),
+  getStatistics: () => api.get('/alerts/statistics'),
   configure: (config) => api.post('/alerts/configure', config),
   getConfig: () => api.get('/alerts/config')
 };
@@ -112,7 +112,7 @@ export const alertApi = {
 export const reentryApi = {
   getAll: (limit = 50) => api.get(`/reentry?limit=${Math.min(limit, 500)}`),
   getUpcoming: (days = 7) => api.get(`/reentry/upcoming?days=${days}`),
-  getStatistics: () => api.get('/reentry/stats'),
+  getStatistics: () => api.get('/reentry/statistics'),
   getById: (id) => api.get(`/reentry/${id}`)
 };
 

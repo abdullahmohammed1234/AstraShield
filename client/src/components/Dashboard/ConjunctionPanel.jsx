@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { conjunctionApi } from '../../services/api';
+import { useState, memo } from 'react';
+import { useHighRiskConjunctions } from '../../hooks/useQueries';
 
 const getRiskBadgeStyles = (riskLevel) => {
   switch (riskLevel) {
@@ -242,32 +242,14 @@ const CollisionAnalysisModal = ({ conjunction, onClose }) => {
   );
 };
 
-const ConjunctionPanel = ({ onConjunctionSelect }) => {
-  const [conjunctions, setConjunctions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+const ConjunctionPanel = memo(({ onConjunctionSelect }) => {
   const [selectedConjunction, setSelectedConjunction] = useState(null);
-
-  const fetchConjunctions = useCallback(async () => {
-    try {
-      setError(null);
-      const response = await conjunctionApi.getHighRisk('high');
-      setConjunctions(response.data.data || []);
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error('Error fetching conjunctions:', err);
-      setError('Failed to load conjunction data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchConjunctions();
-    const intervalId = setInterval(fetchConjunctions, 30000);
-    return () => clearInterval(intervalId);
-  }, [fetchConjunctions]);
+  
+  // Use React Query for automatic caching and revalidation
+  const { data, isLoading, isError, dataUpdatedAt, refetch } = useHighRiskConjunctions('high');
+  
+  const conjunctions = data?.data || [];
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   const handleConjunctionClick = (conjunction) => {
     setSelectedConjunction(conjunction);
@@ -286,7 +268,7 @@ const ConjunctionPanel = ({ onConjunctionSelect }) => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="glass-card p-4">
         <h3 className="font-orbitron text-sm font-semibold text-white mb-4">
@@ -313,9 +295,15 @@ const ConjunctionPanel = ({ onConjunctionSelect }) => {
           )}
         </div>
 
-        {error && (
+        {isError && (
           <div className="text-alert-red text-sm text-center py-2 mb-2">
-            {error}
+            Failed to load conjunction data
+            <button 
+              onClick={() => refetch()} 
+              className="ml-2 text-neon-cyan hover:underline"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -405,6 +393,6 @@ const ConjunctionPanel = ({ onConjunctionSelect }) => {
       )}
     </>
   );
-};
+});
 
 export default ConjunctionPanel;
