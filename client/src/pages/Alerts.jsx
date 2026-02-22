@@ -2,19 +2,64 @@ import { useState, useEffect } from 'react';
 import { alertApi } from '../services/api';
 import { useAlerts, useAlertStatistics } from '../hooks/useQueries';
 import { useAlertWebSocket } from '../hooks/useAlertWebSocket';
+import { useToast } from '../components/ui/Toast';
+import { SkeletonAlertItem, SkeletonStatCard } from '../components/ui/Skeleton';
 import { colors } from '../theme/colors';
+
+// Skeleton for statistics row
+const StatsSkeleton = () => (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="bg-space-card rounded-lg p-4 border border-space-border">
+      <div className="h-8 w-12 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse mb-2"></div>
+      <div className="h-4 w-20 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+    </div>
+    <div className="bg-space-card rounded-lg p-4 border border-space-border">
+      <div className="h-8 w-12 bg-gradient-to-r from-red-500/20 via-red-500/10 to-red-500/20 rounded animate-pulse mb-2"></div>
+      <div className="h-4 w-12 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+    </div>
+    <div className="bg-space-card rounded-lg p-4 border border-space-border">
+      <div className="h-8 w-12 bg-gradient-to-r from-yellow-500/20 via-yellow-500/10 to-yellow-500/20 rounded animate-pulse mb-2"></div>
+      <div className="h-4 w-20 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+    </div>
+    <div className="bg-space-card rounded-lg p-4 border border-space-border">
+      <div className="h-8 w-12 bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-orange-500/20 rounded animate-pulse mb-2"></div>
+      <div className="h-4 w-24 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+    </div>
+  </div>
+);
+
+// Skeleton for alert filters
+const FiltersSkeleton = () => (
+  <div className="flex gap-2 mb-6">
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <div key={i} className="px-4 py-2 rounded-lg">
+        <div className="h-5 w-16 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+      </div>
+    ))}
+  </div>
+);
+
+// Skeleton for alert list
+const AlertListSkeleton = ({ count = 5 }) => (
+  <div className="space-y-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <SkeletonAlertItem key={i} />
+    ))}
+  </div>
+);
 
 const Alerts = () => {
   const [filter, setFilter] = useState('all');
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [mergedAlerts, setMergedAlerts] = useState([]);
+  const toast = useToast();
 
   const { isConnected, alerts: wsAlerts } = useAlertWebSocket();
   
   // Use React Query hooks
   const { data: alertsData, isLoading, error, refetch } = useAlerts(50);
-  const { data: statsData, refetch: refetchStats } = useAlertStatistics();
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useAlertStatistics();
   
   // Get alerts from API data
   const alerts = alertsData?.data || [];
@@ -50,8 +95,10 @@ const Alerts = () => {
       });
       refetch();
       refetchStats();
+      toast.success('Alert acknowledged successfully');
     } catch (err) {
       console.error('Failed to acknowledge alert:', err);
+      toast.error('Failed to acknowledge alert');
     } finally {
       setActionLoading(false);
     }
@@ -66,8 +113,10 @@ const Alerts = () => {
       });
       refetch();
       refetchStats();
+      toast.success('Alert resolved successfully');
     } catch (err) {
       console.error('Failed to resolve alert:', err);
+      toast.error('Failed to resolve alert');
     } finally {
       setActionLoading(false);
     }
@@ -82,8 +131,10 @@ const Alerts = () => {
       });
       await fetchAlerts();
       await fetchStatistics();
+      toast.success('Alert closed successfully');
     } catch (err) {
       setError(err.message);
+      toast.error('Failed to close alert');
     } finally {
       setActionLoading(false);
     }
@@ -141,8 +192,10 @@ const Alerts = () => {
         </div>
       </div>
 
-      {/* Statistics */}
-      {statistics && (
+      {/* Statistics - with skeleton */}
+      {statsLoading ? (
+        <StatsSkeleton />
+      ) : statistics ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-space-card rounded-lg p-4 border border-space-border">
             <div className="text-2xl font-bold text-white">{statistics.total || 0}</div>
@@ -161,24 +214,28 @@ const Alerts = () => {
             <div className="text-sm text-gray-400">Unacknowledged</div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        {['all', 'new', 'acknowledged', 'escalated', 'resolved', 'closed'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === status
-                ? 'bg-blue-600 text-white'
-                : 'bg-space-card text-gray-400 hover:bg-space-border'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </button>
-        ))}
-      </div>
+      {/* Filters - with skeleton */}
+      {isLoading ? (
+        <FiltersSkeleton />
+      ) : (
+        <div className="flex gap-2 mb-6">
+          {['all', 'new', 'acknowledged', 'escalated', 'resolved', 'closed'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === status
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-space-card text-gray-400 hover:bg-space-border'
+              }`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -187,20 +244,17 @@ const Alerts = () => {
         </div>
       )}
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      )}
+      {/* Loading - with skeleton instead of spinner */}
+      {isLoading && <AlertListSkeleton count={5} />}
 
-      {/* Alert List */}
+      {/* Empty state */}
       {!isLoading && filteredAlerts.length === 0 && (
         <div className="bg-space-card rounded-lg p-8 text-center text-gray-400">
           No alerts found
         </div>
       )}
 
+      {/* Alert List */}
       {!isLoading && filteredAlerts.length > 0 && (
         <div className="space-y-4">
           {filteredAlerts.map((alert) => (

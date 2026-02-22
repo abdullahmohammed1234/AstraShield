@@ -4,6 +4,8 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend
 } from 'recharts';
 import { riskApi } from '../services/api';
+import { useToast } from '../components/ui/Toast';
+import { SkeletonChart, SkeletonStatCard, SkeletonCard } from '../components/ui/Skeleton';
 
 const Analytics = () => {
   const [stats, setStats] = useState(null);
@@ -13,6 +15,7 @@ const Analytics = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState(30);
+  const toast = useToast();
 
   const fetchData = useCallback(async () => {
     try {
@@ -35,10 +38,11 @@ const Analytics = () => {
       }
     } catch (err) {
       console.error('Error fetching analytics:', err);
+      toast.error('Failed to load analytics data. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [timeRange]);
+  }, [timeRange, toast]);
 
   useEffect(() => {
     fetchData();
@@ -112,12 +116,39 @@ const Analytics = () => {
     }
   };
 
+  // Loading skeleton
   if (loading) {
     return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin"></div>
-          <p className="mt-4 text-white/70">Loading analytics...</p>
+      <div className="min-h-screen p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="h-8 w-48 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-10 w-24 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="glass-card p-4">
+                <div className="h-3 w-20 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse mb-2"></div>
+                <div className="h-8 w-24 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-card p-6">
+              <div className="h-6 w-40 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse mb-4"></div>
+              <SkeletonChart bars={3} />
+            </div>
+            <div className="glass-card p-6">
+              <div className="h-6 w-48 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded animate-pulse mb-4"></div>
+              <SkeletonChart bars={3} />
+            </div>
+          </div>
         </div>
       </div>
     );
