@@ -86,4 +86,10 @@ conjunctionSchema.index({ satellite1: 1, satellite2: 1 }, { unique: true });
 conjunctionSchema.index({ createdAt: -1 });
 conjunctionSchema.index({ probabilityOfCollision: -1 });
 
+// Compound index for querying by time and risk level
+conjunctionSchema.index({ timeOfClosestApproach: 1, riskLevel: 1 });
+
+// TTL index for auto-cleanup of old conjunction data (90 days)
+conjunctionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+
 module.exports = mongoose.model('Conjunction', conjunctionSchema);

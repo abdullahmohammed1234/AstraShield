@@ -96,7 +96,12 @@ const mlPredictionSchema = new mongoose.Schema({
 // Indexes for efficient queries
 mlPredictionSchema.index({ type: 1, generatedAt: -1 });
 mlPredictionSchema.index({ satelliteId: 1, generatedAt: -1 });
+
+// TTL index: auto-delete predictions when validUntil is reached
 mlPredictionSchema.index({ validUntil: 1 }, { expireAfterSeconds: 0 });
+
+// TTL index: auto-delete old cache entries after 7 days from generation
+mlPredictionSchema.index({ generatedAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 // Static method to get latest prediction
 mlPredictionSchema.statics.getLatestForecast = async function() {

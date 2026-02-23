@@ -145,6 +145,9 @@ const alertSchema = new mongoose.Schema({
 alertSchema.index({ status: 1, createdAt: -1 });
 alertSchema.index({ priority: 1, status: 1 });
 
+// TTL index for auto-cleanup of old closed alerts (180 days)
+alertSchema.index({ closedAt: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 });
+
 // Virtual for time since creation
 alertSchema.virtual('timeSinceCreated').get(function() {
   return Date.now() - this.createdAt.getTime();
