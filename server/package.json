@@ -23,6 +23,7 @@
     "node-cron": "^3.0.3",
     "pdfkit": "^0.14.0",
     "satellite.js": "^5.0.0",
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "@tensorflow/tfjs": "^4.17.0"
   }
 }
