@@ -58,6 +58,14 @@ const satelliteSchema = new mongoose.Schema({
     max: 1,
     index: true
   },
+  launchDate: {
+    type: String,
+    default: null
+  },
+  description: {
+    type: String,
+    default: null
+  },
   lastUpdated: {
     type: Date,
     default: Date.now,

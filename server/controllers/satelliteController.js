@@ -28,13 +28,25 @@ const getSatelliteById = async (req, res) => {
     
     const position = propagateSatellite(tleLine1, tleLine2);
     const orbitalParams = calculateOrbitalParameters(tleLine1, tleLine2);
+    
+    // Get riskScore - ensure it's always defined
+    const riskScore = satellite.riskScore !== undefined ? satellite.riskScore : 0;
 
     res.json({ 
       success: true, 
       data: { 
         ...satellite.toObject(),
         currentPosition: position,
-        orbitalParameters: orbitalParams
+        // Return orbital data in format expected by client
+        orbit: {
+          altitude: orbitalParams?.altitude ?? satellite.orbitalAltitude ?? 0,
+          inclination: orbitalParams?.inclination ?? satellite.inclination ?? 0,
+          period: orbitalParams?.period ?? satellite.orbitalPeriod ?? 0
+        },
+        // Ensure riskScore is always defined
+        riskScore: riskScore,
+        launchDate: satellite.launchDate || null,
+        description: satellite.description || 'No description available.'
       } 
     });
   } catch (error) {
