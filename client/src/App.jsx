@@ -8,6 +8,7 @@ import Alerts from './pages/Alerts';
 import Reentry from './pages/Reentry';
 import MLPrediction from './pages/MLPrediction';
 import TopBar from './components/TopBar';
+import Footer from './components/Footer';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
@@ -18,7 +19,7 @@ function App() {
         <Router>
           <div className="min-h-screen bg-space-dark">
             <TopBar />
-            <main className="pt-16">
+            <main className="pt-16 min-h-[calc(100vh-4rem)]">
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/ml-prediction" element={<MLPrediction />} />
               </Routes>
             </main>
+            <Footer />
           </div>
         </Router>
       </ErrorBoundary>

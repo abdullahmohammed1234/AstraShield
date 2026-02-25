@@ -277,6 +277,33 @@ server.listen(PORT, async () => {
     ]
   });
 
+  // Auto-seed database if empty (fetch TLE data and initialize)
+  try {
+    const count = await Satellite.countDocuments();
+    if (count === 0) {
+      logger.warn('No satellites in database, auto-seeding...', { service: 'seed' });
+      try {
+        await fetchAndStoreTLE();
+        await calculateAllRiskScores();
+        
+        logger.info('Running initial conjunction detection...', { service: 'seed' });
+        await runConjunctionDetection();
+        await calculateAllRiskScoresWithConjunctions();
+        
+        logger.info('Auto-seeding completed successfully', { service: 'seed' });
+      } catch (seedError) {
+        logger.error('Auto-seeding failed - satellites will need manual refresh', { 
+          service: 'seed', 
+          error: seedError.message 
+        });
+      }
+    } else {
+      logger.info(`Database already contains ${count} satellites`, { service: 'seed' });
+    }
+  } catch (countError) {
+    logger.warn('Could not check satellite count', { service: 'seed', error: countError.message });
+  }
+
   // Initialize ML models after server starts (non-blocking)
   setTimeout(async () => {
     try {
