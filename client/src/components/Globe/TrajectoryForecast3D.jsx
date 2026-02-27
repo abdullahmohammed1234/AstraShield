@@ -28,12 +28,14 @@ const generatePredictedPositions = (satellite, hoursAhead = 24, steps = 100) => 
     }
   });
   
-  // Simply use all remaining orbit points from current position for the forecast
-  // The orbit array already represents the full orbital path
+  // The orbit array is ordered in time (future positions from now), representing one complete orbit
+  // Generate positions by starting from closestIndex and following forward in time order
+  // Continue forward even past orbitPointsCount to show full orbital motion without wrapping artifacts
   for (let i = 0; i < steps; i++) {
-    // Distribute points evenly across the full orbit
-    const orbitIndex = Math.floor((i / steps) * orbitPointsCount);
-    const point = orbit[(closestIndex + orbitIndex) % orbitPointsCount];
+    // Move forward in the orbit array - continue past array bounds to show full orbit
+    // This ensures smooth motion without wrap-around discontinuities
+    const orbitIndex = (closestIndex + i) % orbitPointsCount;
+    const point = orbit[orbitIndex];
     
     if (point) {
       positions.push({
@@ -96,10 +98,12 @@ const TrajectoryPath = ({
   if (fullPoints.length < 2) return null;
   
   // Use timeOffset to determine how much of the path to show (0-24 hours maps to 0-1)
-  // Only show the future positions, not the current position
+  // Include current position + future positions for smooth animation
   const timeProgress = Math.min(currentTimeOffset / 24, 1);
-  const pointsToShow = Math.max(1, Math.ceil(points.length * timeProgress));
-  const visiblePoints = points.slice(0, pointsToShow);
+  const futurePointsCount = Math.max(1, Math.ceil(points.length * timeProgress));
+  
+  // Combine current position with future positions for visible path
+  const visiblePoints = [fullPoints[0], ...points.slice(0, futurePointsCount)];
   
   // Ensure we have valid points for the Line component
   if (visiblePoints.length < 2) return null;
