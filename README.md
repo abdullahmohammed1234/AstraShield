@@ -254,4 +254,4 @@ Machine learning model trained on historical conjunction data to predict future 
 
 ##  License
 
-MIT
+MIT License 
