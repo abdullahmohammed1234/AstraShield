@@ -128,9 +128,9 @@ By improving situational awareness, AstraShield helps reduce the risk of catastr
 ## ⚙️ Getting Started
 
 ### Prerequisites
-Node.js 18+
-MongoDB
-Redis
+ - Node.js 18+
+ - MongoDB
+ - Redis
 
 ### Installation
 
