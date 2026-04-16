@@ -17,11 +17,11 @@ Current tools are often fragmented, difficult to visualize, or lack predictive i
 
 AstraShield provides a unified, real-time platform that combines:
 
- 🌍 3D orbital visualization
- ⚠️ Collision risk analysis
- 🧠 Machine learning predictions
- 📊 Analytics & reporting
- 🚨 Real-time alerting system
+  - 🌍 3D orbital visualization
+  - ⚠️ Collision risk analysis
+  - 🧠 Machine learning predictions
+  - 📊 Analytics & reporting
+  - 🚨 Real-time alerting system
 
 It transforms raw orbital data into actionable intelligence.
 
