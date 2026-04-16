@@ -123,7 +123,7 @@ By improving situational awareness, AstraShield helps reduce the risk of catastr
 
 ## ▶️ Demo
 
-👉 Demo Video: (add YouTube/Vimeo link)
+👉 Demo Video: https://youtu.be/xLFYQgBsDU8?si=if1P0nP34Od3V8iX
 
 ## ⚙️ Getting Started
 
